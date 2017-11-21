@@ -5,7 +5,7 @@ module SSE (
 	output logic [31:0] Y
 );
 
-	logic [2:0] state;
+	logic [2:0] state = 3'd0;
 	parameter idle = 3'd0, subtract = 3'd1, multiply = 3'd2, add = 3'd3, stopped = 3'd4;
 	logic [31:0] difference, product, answer;
 	logic [4:0] wc;
@@ -36,107 +36,94 @@ module SSE (
 	
 		if(rst) begin
 			Y <= 0;
-			//next <= 1;
+			next <= 1;
 			state <= idle;
 			ready <= 0;
-			wc <= 0;
 		end
-
+	
 		case(state)
 			
 			idle: begin
 				if (!busy1) begin
-					start1 <= 1;
-					state <= subtract;
 					next <= 0;
+					start1 <= 1;
+					start2 <= 1;
+					start3 <= 1;
+					state <= subtract;
+					wc <= 0;
 				end
 			end
 			
 			subtract: begin
-				if (ready1 &&(wc == 1)) begin
-					next <= 1;
-					wc <= wc + 1;
-				end
-				else if (wc == 2) begin
-					wc <= 0;
-					start1 <= 1;
-					start2 <= 1;
-					state <= multiply;
-					next <= 0;
-				end
-				else begin
 					start1 <= 0;
-					next <= 0;
-					wc <= 1;
-				end
+					start2 <= 0;
+					start3 <= 0;
+					wc <= wc + 1;
+					if(wc == 5) begin
+						next <= 1;
+					end
+					if (wc > 5) begin
+						next <= 0;
+						start1 <= 1;
+						start2 <= 1;
+						start3 <= 1;
+						state <= multiply;
+					end
 			end
 			
 			multiply: begin
-				if (!busy1 && !busy2 && !start1 && !start2) begin
-					if (wc == 1) begin
+					start1 <= 0;
+					start2 <= 0;
+					start3 <= 0;
+					wc <= wc + 1;
+					if( wc == 11 ) begin
 						next <= 1;
-						wc <= wc + 1;
-					end				
-					else if (wc == 2) begin
-						wc <= 0;
+					end
+					if (wc > 11) begin
 						start1 <= 1;
 						start2 <= 1;
 						start3 <= 1;
 						state <= add;
 						next <= 0;
+						//answer <= Y;
 					end
-				end
-				else begin
-					start1 <= 0;
-					start2 <= 0;
-					next <= 0;
-					wc <= 1;
-				end
+					/*else begin
+						next <= 0;
+					end*/
 			end
 			
 			add: begin
-				if ((!busy1 && !busy2 && !busy3) && !(start1 || start2 || start3) && (wc > 1)) begin
-					if(stop) begin
-						if(wc == 2) begin
-							start1 <= 0;
-							start2 <= 1;
-							start3 <= 1;
-							wc <= wc + 1;
-						end
-						else if (wc == 3) begin
-							start1 <= 0;
-							start2 <= 0;
-							start3 <= 1;
-							wc <= wc + 1;
-						end
-						else begin
-							start1 <= 0;
-							start2 <= 0;
-							start3 <= 0;
-							next <= 0;
-							state <= stopped;
-							ready <= 1;
-						end
-						next <= 0;
-					end
-					else begin
-						next <= 1;
-						wc <= 0;
-						start1 <= 1;
-						start2 <= 1;
-						start3 <= 1;
-					end
-				end
-				else begin
-					wc <= 1;
 					start1 <= 0;
 					start2 <= 0;
 					start3 <= 0;
-				end
+					wc <= wc + 1;
+					if(wc == 19) begin
+						next <= 1;
+					end
+					if (wc > 19) begin
+						if (stop && ready1 && ready2 && ready3) begin
+							state <= stopped;
+							next <= 0;
+						end
+						else begin
+							state <= idle;
+							next <= 0;
+							start1 <= 1;
+							start2 <= 1;
+							start3 <= 1;
+						end
+					end
 			end
 			
 			stopped: begin
-				wc <= 0;
+				ready <= 1;
+				start1 <= 0;
+				start2 <= 0;
+				start3 <= 0;
+				
+				if(!stop) begin
+					state <= idle;
+				end
 			end
 			
 		endcase

@@ -20,12 +20,10 @@ module adder_fp(
 	always_ff @(posedge clk) begin
 		case(state)
 			idle: begin
-				//ready <= 0;
-				//busy <= 0;
+				ready <= 0;
+				busy <= 0;
 				if (start) begin
 					state <= checks;
-					ready <= 0;
-					busy <= 1;
 					A_sign <= A[31];
 					A_exponent <= A[30:23];
 					A_mantissa <= {1'b1, A[22:0]};
@@ -42,6 +40,7 @@ module adder_fp(
 				//case if either input is NaN
 			
 			checks: begin
+				busy <= 1;
 				if(((A_exponent == 8'b11111111) && (A_mantissa[22:0] > 0)) || ((B_exponent == 8'b11111111) && (B_mantissa[22:0] > 0))) begin
 					Y <= {1'b0,8'b11111111,22'b0,1'b1};
 					isSet <= 1;
@@ -166,7 +165,6 @@ module adder_fp(
 					Y <= {A_sign, final_exponent, final_mantissa[22:0]};
 				end
 				ready <= 1;
-				busy <= 0;
 				state <= idle; 
 			end
 			

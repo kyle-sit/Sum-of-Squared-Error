@@ -25,7 +25,6 @@ module multiplier_fp(
 				busy <= 0;
 				if (start) begin
 					state <= checks;
-					ready <= 0;
 					A_sign <= A[31];
 					A_exponent <= A[30:23];
 					A_mantissa <= {1'b1, A[22:0]};
