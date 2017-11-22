@@ -7,7 +7,7 @@ module SSE (
 
 	logic [2:0] state;
 	parameter idle = 3'd0, subtract = 3'd1, multiply = 3'd2, add = 3'd3, stopped = 3'd4;
-	logic [31:0] difference, product, answer;
+	logic [31:0] difference, product;
 	logic [4:0] wc;
 	logic start1, ready1, busy1, start2, ready2, busy2, start3, ready3, busy3;
 
@@ -53,16 +53,21 @@ module SSE (
 			end
 			
 			subtract: begin
-				if (ready1 &&(wc == 1)) begin
-					next <= 1;
-					wc <= wc + 1;
-				end
-				else if (wc == 2) begin
-					wc <= 0;
-					start1 <= 1;
-					start2 <= 1;
-					state <= multiply;
-					next <= 0;
+				if (!busy1 && !start1) begin
+					if( wc == 1 ) begin
+						wc <= wc + 1;
+					end
+					else if (wc == 2) begin
+						next <= 1;
+						wc <= wc + 1;
+					end
+					else begin
+						wc <= 0;
+						start1 <= 1;
+						start2 <= 1;
+						state <= multiply;
+						next <= 0;
+					end 
 				end
 				else begin
 					start1 <= 0;
@@ -74,10 +79,13 @@ module SSE (
 			multiply: begin
 				if (!busy1 && !busy2 && !start1 && !start2) begin
 					if (wc == 1) begin
+						wc <= wc + 1;
+					end		
+					if (wc == 2) begin
 						next <= 1;
 						wc <= wc + 1;
-					end				
-					else if (wc == 2) begin
+					end
+					else if (wc == 3) begin
 						wc <= 0;
 						start1 <= 1;
 						start2 <= 1;
@@ -95,15 +103,21 @@ module SSE (
 			end
 			
 			add: begin
-				if ((!busy1 && !busy2 && !busy3) && !(start1 || start2 || start3) && (wc > 1)) begin
+				if ((!busy1 && !busy2 && !busy3) && !(start1 || start2 || start3)) begin
 					if(stop) begin
-						if(wc == 2) begin
+						if(wc == 1) begin
+							wc <= wc + 1;
+						end
+						else if (wc == 2) begin
 							start1 <= 0;
 							start2 <= 1;
 							start3 <= 1;
 							wc <= wc + 1;
 						end
 						else if (wc == 3) begin
+							wc <= wc + 1;
+						end
+						else if (wc == 4) begin
 							start1 <= 0;
 							start2 <= 0;
 							start3 <= 1;
@@ -113,25 +127,35 @@ module SSE (
 							start1 <= 0;
 							start2 <= 0;
 							start3 <= 0;
-							next <= 0;
 							state <= stopped;
 							ready <= 1;
 						end
 						next <= 0;
 					end
 					else begin
-						next <= 1;
-						wc <= 0;
-						start1 <= 1;
-						start2 <= 1;
-						start3 <= 1;
+						if (wc == 1) begin
+							wc <= wc + 1;
+						end				
+						else if (wc == 2) begin
+							next <= 1;
+							wc <= wc + 1;						end
+						else begin
+							wc <= 0;
+							start1 <= 1;
+							start2 <= 1;
+							start3 <= 1;
+							next <= 0;
+						end
 					end
 				end
 				else begin
-					wc <= 1;
+					if( wc < 1) begin
+						wc <= 1;
+					end
 					start1 <= 0;
 					start2 <= 0;
 					start3 <= 0;
+					next <= 0;
 				end
 			end
 			
